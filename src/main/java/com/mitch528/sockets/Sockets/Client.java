@@ -24,14 +24,14 @@ public class Client {
 		handler.setSocket(sock);
 		handler.setID(0);
 		
-		handler.start();
+		handler.handleConnection();
 	}
 
-	public void sendMessage(String message) {
+	public void sendMessage(String message) throws IOException {
 		handler.sendMessage(message);
 	}
 
-	public void disconnect() {
+	public void disconnect() throws IOException {
 		handler.disconnect();
 	}
 

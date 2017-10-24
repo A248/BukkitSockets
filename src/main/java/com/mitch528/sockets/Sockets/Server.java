@@ -13,7 +13,7 @@ import com.mitch528.sockets.events.ServerSocketStartedEvent;
 import com.mitch528.sockets.events.SocketHandlerReadyEvent;
 import com.mitch528.sockets.events.SocketHandlerReadyEventListener;
 
-public class Server extends Thread {
+public class Server {
 
 	private int port;
 
@@ -33,7 +33,7 @@ public class Server extends Thread {
 		this.accepted = new ServerSocketAccepted();
 	}
 
-	private void startListening() throws IOException {
+	public void startListening() throws IOException {
 		server = new ServerSocket(port);
 
 		started.executeEvent(new ServerSocketStartedEvent(this));
@@ -51,13 +51,13 @@ public class Server extends Thread {
 
 			});
 
-			handler.start();
+			handler.handleConnection();
 
 			handlers.add(handler);
 		}
 	}
 
-	public void shutdownAll() {
+	public void shutdownAll() throws IOException {
 		for (SocketHandler handler : handlers) {
 			handler.disconnect();
 		}
@@ -65,12 +65,8 @@ public class Server extends Thread {
 		handlers.clear();
 	}
 
-	public void stopServer() {
-		try {
-			server.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	public void stopServer() throws IOException {
+		server.close();
 	}
 
 	public SocketHandler[] getHandlers() {
@@ -87,15 +83,6 @@ public class Server extends Thread {
 
 	public ServerSocketAccepted getSocketAccepted() {
 		return accepted;
-	}
-
-	@Override
-	public void run() {
-		try {
-			startListening();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 	}
 
 }

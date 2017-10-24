@@ -1,5 +1,6 @@
 package com.mitch528.sockets.Sockets;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
@@ -14,7 +15,7 @@ import com.mitch528.sockets.events.SocketDisconnectedEvent;
 import com.mitch528.sockets.events.SocketHandlerReady;
 import com.mitch528.sockets.events.SocketHandlerReadyEvent;
 
-public class SocketHandler extends Thread {
+public class SocketHandler {
 
 	private Socket sock;
 
@@ -52,38 +53,34 @@ public class SocketHandler extends Thread {
 		this.ready = new SocketHandlerReady();
 	}
 
-	private void HandleConnection() {
+	public void handleConnection() throws IOException {
 		if (sock == null) {
 			disconnect();
 			return;
 		}
 
-		try {
-			this.hostName = sock.getInetAddress().getCanonicalHostName();
+		this.hostName = sock.getInetAddress().getCanonicalHostName();
 
-			in = sock.getInputStream();
-			out = sock.getOutputStream();
+		in = sock.getInputStream();
+		out = sock.getOutputStream();
 
-			if (in == null || out == null) {
-				disconnect();
-				return;
-			}
-
-			ready.executeEvent(new SocketHandlerReadyEvent(this, this));
-			connected.executeEvent(new SocketConnectedEvent(this, this, id));
-
-			startReading();
-		} catch (Exception e) {
-			e.printStackTrace();
+		if (in == null || out == null) {
+			disconnect();
+			return;
 		}
+		
+		ready.executeEvent(new SocketHandlerReadyEvent(this, this));
+		connected.executeEvent(new SocketConnectedEvent(this, this, id));
+		
+		startReading();
 	}
 
-	public void sendMessage(String message) {
+	public void sendMessage(String message) throws IOException {
 		if (sock.isConnected() && !sock.isClosed())
 			writeToStream(message);
 	}
 
-	private void startReading() {
+	private void startReading() throws IOException {
 		if (!sock.isConnected() || sock.isClosed()) {
 			disconnect();
 			return;
@@ -91,53 +88,49 @@ public class SocketHandler extends Thread {
 
 		buffer = new byte[buffer.length - bytesReceived];
 
-		try {
-			if (bytesReceived == -1) { // end of stream
-				disconnect();
-				return;
+		if (bytesReceived == -1) { // end of stream
+			disconnect();
+			return;
+		}
+
+		bytesReceived += in.read(buffer);
+
+		if (messageSize == -1) { // still reading size of data
+			if (bytesReceived == 4) { // received size information
+				messageSize = ByteBuffer.wrap(buffer).getInt(0);
+
+				if (messageSize < 0) {
+					throw new IllegalStateException("Message size is < 0");
+				}
+
+				buffer = new byte[messageSize];
+
+				bytesReceived = 0;
 			}
 
-			bytesReceived += in.read(buffer);
-
-			if (messageSize == -1) { // still reading size of data
-				if (bytesReceived == 4) { // received size information
-					messageSize = ByteBuffer.wrap(buffer).getInt(0);
-
-					if (messageSize < 0) {
-						throw new Exception();
-					}
-
-					buffer = new byte[messageSize];
-
-					bytesReceived = 0;
-				}
-
-				if (messageSize != 0) { // need more data
-					startReading();
-				}
-			} else {
-				if (bytesReceived == messageSize) { // message body received
-					StringBuffer sb = new StringBuffer();
-					sb.append(new String(buffer));
-
-					message.executeEvent(new MessageReceivedEvent(this, id, sb.toString()));
-
-					// reset
-					bytesReceived = 0;
-					messageSize = -1;
-					buffer = new byte[4];
-
-					startReading(); // start reading again
-				} else { // need more data
-					startReading();
-				}
+			if (messageSize != 0) { // need more data
+				startReading();
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
+		} else {
+			if (bytesReceived == messageSize) { // message body received
+				StringBuffer sb = new StringBuffer();
+				sb.append(new String(buffer));
+
+				message.executeEvent(new MessageReceivedEvent(this, id, sb.toString()));
+
+				// reset
+				bytesReceived = 0;
+				messageSize = -1;
+				buffer = new byte[4];
+
+				startReading(); // start reading again
+			} else { // need more data
+				startReading();
+			}
 		}
 	}
 
-	private void writeToStream(String message) {
+	private void writeToStream(String message) throws IOException {
 
 		if (!sock.isConnected() || sock.isClosed() || out == null)
 			return;
@@ -149,31 +142,20 @@ public class SocketHandler extends Thread {
 		ByteBuffer bb = ByteBuffer.allocate(sizeinfo.length);
 		bb.putInt(message.getBytes().length);
 
-		try {
-
-			out.write(bb.array());
-			out.write(data);
-			out.flush();
-
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-
+		out.write(bb.array());
+		out.write(data);
+		out.flush();
 	}
 
-	public void disconnect() {
-		try {
-			System.out.println("Client disconnecting");
+	public void disconnect() throws IOException {
+		System.out.println("Client disconnecting");
 
-			sock.shutdownInput();
-			sock.shutdownOutput();
+		sock.shutdownInput();
+		sock.shutdownOutput();
 
-			sock.close();
+		sock.close();
 
-			disconnected.executeEvent(new SocketDisconnectedEvent(this, id));
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		disconnected.executeEvent(new SocketDisconnectedEvent(this, id));
 	}
 
 	public void setSocket(Socket sock) {
@@ -208,12 +190,4 @@ public class SocketHandler extends Thread {
 		return ready;
 	}
 
-	public void run() {
-
-		if (this.sock == null)
-			return;
-
-		HandleConnection();
-
-	}
 }
