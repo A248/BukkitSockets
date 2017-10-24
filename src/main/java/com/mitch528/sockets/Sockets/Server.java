@@ -33,31 +33,27 @@ public class Server extends Thread {
 		this.accepted = new ServerSocketAccepted();
 	}
 
-	private void startListening() {
-		try {
-			server = new ServerSocket(port);
+	private void startListening() throws IOException {
+		server = new ServerSocket(port);
 
-			started.executeEvent(new ServerSocketStartedEvent(this));
+		started.executeEvent(new ServerSocketStartedEvent(this));
 
-			while (true) {
-				Socket sock = server.accept();
+		while (true) {
+			Socket sock = server.accept();
 
-				final SocketHandler handler = new SocketHandler(sock, ++counter);
+			final SocketHandler handler = new SocketHandler(sock, ++counter);
 
-				handler.getReady().addSocketHandlerReadyEventListener(new SocketHandlerReadyEventListener() {
+			handler.getReady().addSocketHandlerReadyEventListener(new SocketHandlerReadyEventListener() {
 
-					public void socketHandlerReady(SocketHandlerReadyEvent evt) {
-						accepted.executeEvent(new ServerSocketAcceptedEvent(this, handler));
-					}
+				public void socketHandlerReady(SocketHandlerReadyEvent evt) {
+					accepted.executeEvent(new ServerSocketAcceptedEvent(this, handler));
+				}
 
-				});
+			});
 
-				handler.start();
+			handler.start();
 
-				handlers.add(handler);
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
+			handlers.add(handler);
 		}
 	}
 
@@ -95,7 +91,11 @@ public class Server extends Thread {
 
 	@Override
 	public void run() {
-		startListening();
+		try {
+			startListening();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 }

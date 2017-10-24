@@ -1,6 +1,8 @@
 package com.mitch528.sockets.Sockets;
 
+import java.io.IOException;
 import java.net.Socket;
+import java.net.UnknownHostException;
 
 public class Client {
 
@@ -16,21 +18,13 @@ public class Client {
 		this.port = port;
 	}
 
-	public void connect() {
-
-		try {
-
-			sock = new Socket(host, port);
-
-			handler.setSocket(sock);
-			handler.setID(0);
-
-			handler.start();
-
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-
+	public void connect() throws UnknownHostException, IOException {
+		sock = new Socket(host, port);
+		
+		handler.setSocket(sock);
+		handler.setID(0);
+		
+		handler.start();
 	}
 
 	public void sendMessage(String message) {
