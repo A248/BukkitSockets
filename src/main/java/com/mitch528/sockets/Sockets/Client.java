@@ -34,6 +34,14 @@ public class Client {
 	public void disconnect() throws IOException {
 		handler.disconnect();
 	}
+	
+	public boolean isConnected() {
+		if (sock == null) {
+			return false;
+		} else {
+			return sock.isConnected();
+		}
+	}
 
 	public SocketHandler getHandler() {
 		return handler;
