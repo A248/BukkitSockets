@@ -57,7 +57,6 @@ public class Server extends Thread
 				handler.getReady().addSocketHandlerReadyEventListener(new SocketHandlerReadyEventListener()
 				{
 					
-					@Override
 					public void socketHandlerReady(SocketHandlerReadyEvent evt)
 					{
 						accepted.executeEvent(new ServerSocketAcceptedEvent(this, handler));
