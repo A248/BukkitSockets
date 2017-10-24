@@ -66,7 +66,7 @@ public class Server {
 	}
 
 	public void stopServer() throws IOException {
-		server.close();
+		if (server != null) server.close();
 	}
 
 	public SocketHandler[] getHandlers() {
